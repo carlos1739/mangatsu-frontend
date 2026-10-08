@@ -577,12 +577,7 @@ class _MangaDetailState extends State<MangaDetail> {
   }
 
   Widget _communitySection() {
-    final comments = [
-      ('Rian_IF', 'Art dan pacing chapter terbaru makin solid.'),
-      ('MikaReads', 'Karakter utamanya punya perkembangan yang menarik.'),
-      ('OtakuNusantara', 'Tidak sabar menunggu chapter berikutnya!'),
-      ('Sora', 'Panel aksinya terlihat sangat keren.'),
-    ];
+    const comments = <(String, String)>[];
     return _sectionShell(
       title: 'Community & Review',
       child: Column(

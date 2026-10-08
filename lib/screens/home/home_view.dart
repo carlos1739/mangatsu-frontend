@@ -29,7 +29,7 @@ mixin HomeView on _HomeStateBase {
           Image.asset('assets/logo/LogoM1.png', width: 42, height: 42),
           const SizedBox(width: 8),
           const Text(
-            'MangaTsu',
+            'angaTsu',
             style: TextStyle(
               fontFamily: 'Tilt',
               color: Colors.white,

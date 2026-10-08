@@ -701,11 +701,7 @@ mixin HomeSections on _HomeStateBase {
     if (allManga.isEmpty) {
       return const SliverToBoxAdapter(child: SizedBox.shrink());
     }
-    final snippets = [
-      'Wah, plot twist-nya gila banget!',
-      'Chapter terbaru bikin penasaran.',
-      'Art style manga ini keren sekali.',
-    ];
+    const snippets = <String>[];
     return SliverToBoxAdapter(
       child: Align(
         child: ConstrainedBox(
