@@ -4,7 +4,7 @@ import 'dart:convert';
 import '../models/manga.dart';
 
 class ApiService {
-  static const String baseUrl = 'http://localhost:5000/api';
+  static const String baseUrl = 'http://127.0.0.1:5000/api';
   static const Duration timeout = Duration(seconds: 30);
 
   // ============ MANGA ENDPOINTS ============
@@ -18,7 +18,7 @@ class ApiService {
       if (response.statusCode == 200) {
         final jsonData = jsonDecode(response.body);
         final List<dynamic> data = jsonData['data'] ?? [];
-        return data.map((item) => _parseManga(item)).toList();
+        return data.map((item) => Manga.fromApiJson(item)).toList();
       } else {
         throw Exception('Failed to load manga: ${response.statusCode}');
       }
@@ -37,7 +37,7 @@ class ApiService {
       if (response.statusCode == 200) {
         final jsonData = jsonDecode(response.body);
         final List<dynamic> data = jsonData['data'] ?? [];
-        return data.map((item) => _parseManga(item)).toList();
+        return data.map((item) => Manga.fromApiJson(item)).toList();
       } else {
         throw Exception('Search failed');
       }
@@ -54,7 +54,7 @@ class ApiService {
 
       if (response.statusCode == 200) {
         final jsonData = jsonDecode(response.body);
-        return _parseManga(jsonData['data']);
+        return Manga.fromApiJson(jsonData['data']);
       } else {
         throw Exception('Manga not found');
       }
@@ -74,7 +74,7 @@ class ApiService {
         final List<dynamic> data = jsonData['data'] ?? [];
 
         return data
-            .map((item) => _parseManga(item))
+            .map((item) => Manga.fromApiJson(item))
             .where(
               (manga) => genres.every((genre) => manga.genre.contains(genre)),
             )
@@ -120,7 +120,7 @@ class ApiService {
       if (response.statusCode == 200) {
         final jsonData = jsonDecode(response.body);
         final List<dynamic> data = jsonData['data'] ?? [];
-        return data.map((item) => _parseManga(item)).toList();
+        return data.map((item) => Manga.fromApiJson(item)).toList();
       } else {
         throw Exception('Failed to load bookmarks');
       }
@@ -158,25 +158,5 @@ class ApiService {
     } catch (e) {
       rethrow;
     }
-  }
-
-  // ============ HELPER FUNCTIONS ============
-
-  static Manga _parseManga(Map<String, dynamic> json) {
-    return Manga(
-      id: json['id'] ?? 0,
-      title: json['title'] ?? 'Unknown',
-      linkGambar: json['linkGambar'] ?? '',
-      chapter: json['chapter']?.toString() ?? 'N/A',
-      status: json['status'] ?? 'Unknown',
-      sinopsis: json['sinopsis'] ?? '',
-      release: json['release']?.toString() ?? 'Unknown',
-      genre: List<String>.from(json['genre'] ?? []),
-      author: json['author'] ?? 'Unknown',
-      bookmark: json['bookmark'] ?? false,
-      likes: json['likes'] ?? 0,
-      view: json['view'] ?? 0,
-      rating: (json['rating'] ?? 0.0).toDouble(),
-    );
   }
 }

@@ -10,7 +10,7 @@ import 'package:project_manga/screens/catalog/manga_detail.dart';
 import 'package:project_manga/models/manga.dart';
 import 'package:project_manga/screens/profile/profile.dart';
 import 'package:project_manga/services/api_service.dart';
-import 'package:project_manga/services/auth_session.dart';
+import 'package:project_manga/screens/auth/user/user_session.dart';
 import 'package:project_manga/screens/auth/login.dart';
 
 part 'home_view.dart';
@@ -201,7 +201,7 @@ abstract class _HomeStateBase extends State<Beranda> {
   }
 
   void _openLibrary() {
-    if (!AuthSession.isLoggedIn) {
+    if (!UserSession.isLoggedIn) {
       showDialog<void>(
         context: context,
         builder:

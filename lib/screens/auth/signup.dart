@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:project_manga/screens/auth/login.dart';
+import 'package:project_manga/services/auth_service.dart';
 
 class Signup extends StatefulWidget {
   const Signup({super.key});
@@ -9,224 +10,171 @@ class Signup extends StatefulWidget {
 }
 
 class _SignupState extends State<Signup> {
-  Icon con = Icon(Icons.visibility_off);
-  Icon conK = Icon(Icons.visibility_off);
+  final TextEditingController nameCtr = TextEditingController();
+  final TextEditingController emailCtr = TextEditingController();
+  final TextEditingController pswCtr = TextEditingController();
+  final TextEditingController confirmCtr = TextEditingController();
   bool secure = true;
-  bool securek = true;
+  bool confirmSecure = true;
+  bool loading = false;
+  String? errorMessage;
 
-  TextEditingController idCtr = TextEditingController();
-  TextEditingController emailCtr = TextEditingController();
-  TextEditingController pswCtr = TextEditingController();
-  TextEditingController kPswctr = TextEditingController();
+  @override
+  void dispose() {
+    nameCtr.dispose();
+    emailCtr.dispose();
+    pswCtr.dispose();
+    confirmCtr.dispose();
+    super.dispose();
+  }
 
+  Future<void> _register() async {
+    final name = nameCtr.text.trim();
+    final email = emailCtr.text.trim();
+    final password = pswCtr.text;
+
+    if (name.length < 2 ||
+        !RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$').hasMatch(email) ||
+        password.length < 8) {
+      setState(() => errorMessage = 'Nama, email valid, dan password minimal 8 karakter wajib diisi');
+      return;
+    }
+    if (password != confirmCtr.text) {
+      setState(() => errorMessage = 'Password dan konfirmasi password tidak sama');
+      return;
+    }
+
+    setState(() {
+      loading = true;
+      errorMessage = null;
+    });
+    try {
+      await AuthService.register(
+        name: name,
+        email: email,
+        password: password,
+      );
+      if (!mounted) return;
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (_) => const SignIn()),
+      );
+    } catch (error) {
+      if (mounted) {
+        setState(() => errorMessage = error.toString());
+      }
+    } finally {
+      if (mounted) {
+        setState(() => loading = false);
+      }
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       body: SingleChildScrollView(
+        padding: const EdgeInsets.all(24),
         child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Center(
-              child: Padding(
-                padding: EdgeInsets.only(top: 60.0),
-                child: Text(
-                  "Daftar",
-                  style: TextStyle(fontFamily: 'Tilt', fontSize: 50),
-                ),
-              ),
+            const SizedBox(height: 50),
+            const Text(
+              'Daftar',
+              style: TextStyle(fontFamily: 'Tilt', fontSize: 50),
             ),
+            const SizedBox(height: 30),
             Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 Image.asset('assets/logo/LogoM1.png', width: 50),
-                Text(
-                  "angaTsu",
+                const Text(
+                  'angaTsu',
                   style: TextStyle(fontFamily: 'Tilt', fontSize: 50),
                 ),
               ],
             ),
-            Padding(
-              padding: EdgeInsets.only(top: 30.0,right: 255.0),
-              
+            const SizedBox(height: 35),
+            TextField(
+              controller: nameCtr,
+              textCapitalization: TextCapitalization.words,
+              decoration: const InputDecoration(
+                hintText: 'Masukkan Nama',
+                border: OutlineInputBorder(),
+              ),
+            ),
+            const SizedBox(height: 18),
+            TextField(
+              controller: emailCtr,
+              keyboardType: TextInputType.emailAddress,
+              decoration: const InputDecoration(
+                hintText: 'Masukkan Email',
+                border: OutlineInputBorder(),
+              ),
+            ),
+            const SizedBox(height: 18),
+            TextField(
+              controller: pswCtr,
+              obscureText: secure,
+              decoration: InputDecoration(
+                hintText: 'Masukkan Password',
+                border: const OutlineInputBorder(),
+                suffixIcon: IconButton(
+                  onPressed: () => setState(() => secure = !secure),
+                  icon: Icon(secure ? Icons.visibility_off : Icons.visibility),
+                ),
+              ),
+            ),
+            const SizedBox(height: 18),
+            TextField(
+              controller: confirmCtr,
+              obscureText: confirmSecure,
+              decoration: InputDecoration(
+                hintText: 'Masukkan Password Ulang',
+                border: const OutlineInputBorder(),
+                suffixIcon: IconButton(
+                  onPressed: () => setState(() => confirmSecure = !confirmSecure),
+                  icon: Icon(
+                    confirmSecure ? Icons.visibility_off : Icons.visibility,
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(height: 16),
+            if (errorMessage != null)
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.red.shade50,
+                  borderRadius: BorderRadius.circular(10),
+                ),
                 child: Text(
-                  "ID",
-                  style: TextStyle(fontFamily: 'Tilt', fontSize: 30),
-                ),
-              
-            ),
-            SizedBox(
-              width: 300,
-              child: Padding(
-                padding: EdgeInsets.only(top: 5.0),
-                child: TextField(
-                  keyboardType: TextInputType.text,
-                  controller: idCtr,
-
-                  decoration: InputDecoration(
-    
-                    hintText: 'Masukkan ID',
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.all(Radius.circular(10.0)),
-                    ),
-                  ),
+                  errorMessage!,
+                  style: const TextStyle(color: Colors.red),
                 ),
               ),
-            ),
-            Padding(
-              padding: EdgeInsets.only(right: 220.0, top: 10.0),
-          
-                child: Text(
-                  "Email",
-                  style: TextStyle(fontFamily: 'Tilt', fontSize: 30),
-                ),
-            
-            ),
+            const SizedBox(height: 20),
             SizedBox(
-              width: 300,
-              child: Padding(
-                padding: EdgeInsets.only(top: 5.0),
-                child: TextField(
-                  keyboardType: TextInputType.emailAddress,
-                  controller: emailCtr,
-                  decoration: InputDecoration(
-                    hintText: 'Masukkan Email',
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.all(Radius.circular(10.0)),
-                    ),
-                  ),
-                ),
-              ),
-            ),
-            Padding(
-              padding: EdgeInsets.only(right: 155.0, top: 10.0),
-            
-                child: Text(
-                  "Password",
-                  style: TextStyle(fontFamily: 'Tilt', fontSize: 30),
-                ),
-             
-            ),
-            SizedBox(
-              width: 300,
-              child: Padding(
-                padding: EdgeInsets.only(top: 5.0),
-                child: TextField(
-                  obscureText: secure,
-                  decoration: InputDecoration(
-                    hintText: 'Masukkan Password',
-                    suffixIcon: IconButton(
-                      onPressed: () {
-                        setState(() {
-                          if (!secure) {
-                            con = Icon(Icons.visibility_off);
-                            secure = !secure;
-                          } else {
-                            con = Icon(Icons.visibility);
-                            secure = !secure;
-                          }
-                        });
-                      },
-                      icon: con,
-                    ),
-
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.all(Radius.circular(10.0)),
-                    ),
-                  ),
-                ),
-              ),
-            ),
-            Padding(
-              padding: EdgeInsets.only( top: 10.0),
-             
-                child: Text(
-                  "Konfirmasi Password",
-                  style: TextStyle(fontFamily: 'Tilt', fontSize: 30),
-                ),
-             
-            ),
-            SizedBox(
-              width: 300,
-              child: Padding(
-                padding: EdgeInsets.only(top: 5.0),
-                child: TextField(
-                  obscureText: securek,
-                  decoration: InputDecoration(
-                    suffixIcon: IconButton(
-                      onPressed: () {
-                        setState(() {
-                          if (!securek) {
-                            conK = Icon(Icons.visibility_off);
-                            securek = !securek;
-                          } else {
-                            conK = Icon(Icons.visibility);
-                            securek = !securek;
-                          }
-                        });
-                      },
-                      icon: conK,
-                    ),
-                    hintText: 'Masukkan Password Ulang',
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.all(Radius.circular(10.0)),
-                    ),
-                  ),
-                ),
-              ),
-            ),
-            Padding(
-              padding: EdgeInsets.only(right: 75.0,bottom: 5.0),
-             
-                child: TextButton(
-                  onPressed: () {
-                    Navigator.pushReplacement(
-                      context,
-                      MaterialPageRoute(builder: (context) => const SignIn()),
-                    );
-                  },
-                  child: Text(
-                    "Sudah punya akun? Klik disini !",
-                    style: TextStyle(
-                      fontFamily: 'Tilt',
-                      color: Color.fromRGBO(46, 97, 184, 100.0),
-                    ),
-                  ),
-               
-              ),
-            ),
-
-            SizedBox(
-              width: 150,
+              width: 200,
               child: OutlinedButton(
-                style: ButtonStyle(
-                  shape: WidgetStateProperty.all<RoundedRectangleBorder>(
-                    RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(10.0),
-                    ),
-                  ),
-                ),
-
-                onPressed: () {
-                  Navigator.pushReplacement(
-                    context,
-                    MaterialPageRoute(builder: (context) => const SignIn()),
-                  );
-                },
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Text(
-                      "Daftar",
-                      style: TextStyle(
-                        fontFamily: 'Tilt',
-                        color: Colors.black,
-                        fontSize: 28,
-                      ),
-                      textAlign: TextAlign.center,
-                    ),
-                  ],
-                ),
+                onPressed: loading ? null : _register,
+                child: loading
+                    ? const SizedBox(
+                        height: 24,
+                        width: 24,
+                        child: CircularProgressIndicator(),
+                      )
+                    : const Text('Daftar'),
               ),
+            ),
+            const SizedBox(height: 25),
+            TextButton(
+              onPressed: () => Navigator.pushReplacement(
+                context,
+                MaterialPageRoute(builder: (_) => const SignIn()),
+              ),
+              child: const Text('Sudah punya akun? Login disini'),
             ),
           ],
         ),
