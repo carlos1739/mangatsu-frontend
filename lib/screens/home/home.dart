@@ -2,7 +2,6 @@
 
 import 'dart:async';
 import 'dart:ui' as ui;
-
 import 'package:flutter/material.dart';
 import 'package:project_manga/screens/catalog/by_genre.dart';
 import 'package:project_manga/screens/catalog/by_title.dart';
@@ -32,6 +31,7 @@ abstract class _HomeStateBase extends State<Beranda> {
   final Set<String> genreFilters = {};
   final TextEditingController _searchController = TextEditingController();
   Timer? _carouselTimer;
+  final ScrollController _collectionsScrollController = ScrollController();
   int _heroIndex = 0;
   int _appearance = 0;
   bool isLoading = true;
@@ -40,7 +40,6 @@ abstract class _HomeStateBase extends State<Beranda> {
   String? _selectedSortOption;
   int _visibleUpdates = 8;
   int _trendingTab = 0;
-  bool _collectionsHover = false;
   final Set<int> _removedHistory = {};
   bool _showLibrary = false;
 
@@ -81,6 +80,14 @@ abstract class _HomeStateBase extends State<Beranda> {
       setState(() {
         allManga = manga;
         displayedManga = manga;
+        genre =
+            manga
+                .expand((item) => item.genre)
+                .map((item) => item.trim())
+                .where((item) => item.isNotEmpty)
+                .toSet()
+                .toList()
+              ..sort();
         isLoading = false;
       });
       _startCarousel();
@@ -135,12 +142,20 @@ abstract class _HomeStateBase extends State<Beranda> {
       Navigator.push(
         context,
         MaterialPageRoute(
-          builder: (_) => Bygenre(manga: result, genre: genreFilters),
+          builder:
+              (_) => Bygenre(genreName: genreFilters.join(', '), manga: result),
         ),
       );
     } catch (e) {
       _showMessage('Filter genre gagal: $e');
     }
+  }
+
+  void _openGenre(String selectedGenre) {
+    Navigator.pushNamed(
+      context,
+      '/genre/${Uri.encodeComponent(selectedGenre)}',
+    );
   }
 
   void _filterAndSort(String? value) {
@@ -396,6 +411,7 @@ class _BerandaState extends _HomeStateBase
   @override
   void dispose() {
     _carouselTimer?.cancel();
+    _collectionsScrollController.dispose();
     _searchController.dispose();
     super.dispose();
   }
