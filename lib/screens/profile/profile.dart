@@ -1,19 +1,117 @@
+import 'dart:convert';
+
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
 import 'package:project_manga/screens/auth/login.dart';
 import 'package:project_manga/screens/auth/user/user_session.dart';
+// SESUAIKAN: path file Beranda (kalau merah, klik "Beranda" lalu Ctrl + .)
+import 'package:project_manga/screens/home/home.dart';
 
 class Profil extends StatelessWidget {
   const Profil({super.key});
 
+  // SESUAIKAN port Flask (samakan dengan yang dipakai di halaman login/register)
+  static String get baseUrl =>
+      kIsWeb ? 'http://localhost:5000' : 'http://10.0.2.2:5000';
+
   void _logout(BuildContext context) {
     UserSession.clear();
-    // Kalau AuthSession punya fungsi logout, panggil juga di sini:
-    // AuthSession.logout();
     Navigator.pushAndRemoveUntil(
       context,
       MaterialPageRoute(builder: (context) => const SignIn()),
       (route) => false,
     );
+  }
+
+  void _goHome(BuildContext context) {
+    UserSession.clear();
+    Navigator.pushAndRemoveUntil(
+      context,
+      MaterialPageRoute(builder: (context) => const Beranda()),
+      (route) => false,
+    );
+  }
+
+  /// Return null kalau berhasil, atau pesan error kalau gagal.
+  Future<String?> _deleteAccount(String password) async {
+    try {
+      final response = await http.delete(
+        Uri.parse('$baseUrl/api/delete-account'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          'email': UserSession.email ?? '',
+          'password': password,
+        }),
+      );
+
+      if (response.statusCode == 200) return null;
+
+      try {
+        final body = jsonDecode(response.body);
+        return body['message']?.toString() ??
+            'Gagal (kode ${response.statusCode})';
+      } catch (_) {
+        return 'Gagal (kode ${response.statusCode})';
+      }
+    } catch (e) {
+      return 'Tidak bisa terhubung ke server: $e';
+    }
+  }
+
+  Future<void> _showDeleteDialog(BuildContext context) async {
+    final passwordController = TextEditingController();
+
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Hapus Akun'),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Text(
+                'Apakah kamu yakin ingin menghapus akun ini? '
+                'Semua data akan hilang dan tidak bisa dikembalikan.',
+              ),
+              const SizedBox(height: 16),
+              TextField(
+                controller: passwordController,
+                obscureText: true,
+                decoration: const InputDecoration(
+                  labelText: 'Masukkan password untuk konfirmasi',
+                  border: OutlineInputBorder(),
+                ),
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Tidak'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Ya', style: TextStyle(color: Colors.red)),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm != true) return;
+    if (!context.mounted) return;
+
+    final error = await _deleteAccount(passwordController.text);
+
+    if (!context.mounted) return;
+    if (error == null) {
+      _goHome(context);
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(error)),
+      );
+    }
   }
 
   @override
@@ -76,6 +174,22 @@ class Profil extends StatelessWidget {
                             ),
                           ),
                         ),
+                        const SizedBox(height: 12),
+                        SizedBox(
+                          width: double.infinity,
+                          child: OutlinedButton.icon(
+                            onPressed: () => _showDeleteDialog(context),
+                            icon: const Icon(Icons.delete, color: Colors.red),
+                            label: const Text(
+                              "Hapus Akun",
+                              style: TextStyle(fontSize: 18, color: Colors.red),
+                            ),
+                            style: OutlinedButton.styleFrom(
+                              side: const BorderSide(color: Colors.red),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 30),
                       ],
                     )
                   : Column(
