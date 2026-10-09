@@ -25,6 +25,7 @@ class _MangaDetailState extends State<MangaDetail> {
   bool _showFullSynopsis = false;
   bool _bookmarked = false;
   bool _bookmarkLoading = false;
+  String _readStatus = 'plan';   // <-- baru
   int _visibleComments = 3;
   int _appearance = 1;
   Manga? _loadedManga;
@@ -61,17 +62,23 @@ class _MangaDetailState extends State<MangaDetail> {
       if (!mounted) return;
       setState(() {
         _loadedManga = detail;
-        _bookmarked = detail.bookmark;
+        // _bookmarked = detail.bookmark;  // dihapus
       });
     } catch (error) {
       debugPrint('Gagal memuat detail manga ${widget.manga.id}: $error');
     }
   }
 
+  // [UBAH] _checkBookmark diganti: sekarang mengambil status baca
   Future<void> _checkBookmark() async {
-    final bookmarked = await ApiService.isBookmarked(widget.manga.id);
-    if (mounted) setState(() => _bookmarked = bookmarked);
+    final status = await ApiService.getBookmarkStatus(widget.manga.id);
+    if (!mounted) return;
+    setState(() {
+      _bookmarked = status != null;
+      if (status != null) _readStatus = status;
+    });
   }
+  // [AKHIR]
 
   Future<void> _toggleBookmark() async {
     setState(() => _bookmarkLoading = true);
@@ -82,7 +89,12 @@ class _MangaDetailState extends State<MangaDetail> {
         await ApiService.addBookmark(_currentManga);
       }
       if (mounted) {
-        setState(() => _bookmarked = !_bookmarked);
+        // [UBAH] sebelumnya: setState(() => _bookmarked = !_bookmarked);
+        setState(() {
+          _bookmarked = !_bookmarked;
+          if (_bookmarked) _readStatus = 'plan';
+        });
+        // [AKHIR]
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(
@@ -101,6 +113,20 @@ class _MangaDetailState extends State<MangaDetail> {
       if (mounted) setState(() => _bookmarkLoading = false);
     }
   }
+
+  // [BARU] fungsi untuk mengubah status baca
+  Future<void> _changeStatus(String value) async {
+    final old = _readStatus;
+    setState(() => _readStatus = value);
+    try {
+      await ApiService.updateBookmarkStatus(widget.manga.id, value);
+      _showMessage('Status diperbarui: ${ApiService.statusLabel(value)}');
+    } catch (error) {
+      if (mounted) setState(() => _readStatus = old);
+      _showMessage('Gagal memperbarui status: $error');
+    }
+  }
+  // [AKHIR]
 
   int get _chapterCount => int.tryParse(_currentManga.chapter) ?? 0;
 
@@ -337,6 +363,34 @@ class _MangaDetailState extends State<MangaDetail> {
             label: Text(_bookmarked ? 'Tersimpan' : 'Bookmark'),
           ),
         ),
+        // [BARU] dropdown status baca, hanya muncul jika sudah di-bookmark
+        if (_bookmarked) ...[
+          const SizedBox(height: 8),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12),
+            decoration: BoxDecoration(
+              border: Border.all(color: Colors.white24),
+              borderRadius: BorderRadius.circular(20),
+            ),
+            child: DropdownButtonHideUnderline(
+              child: DropdownButton<String>(
+                value: _readStatus,
+                isExpanded: true,
+                dropdownColor: const Color(0xff24242b),
+                style: const TextStyle(color: Colors.white, fontSize: 13),
+                items: const [
+                  DropdownMenuItem(value: 'reading', child: Text('Reading')),
+                  DropdownMenuItem(value: 'plan', child: Text('Plan')),
+                  DropdownMenuItem(value: 'completed', child: Text('Completed')),
+                ],
+                onChanged: (value) {
+                  if (value != null) _changeStatus(value);
+                },
+              ),
+            ),
+          ),
+        ],
+        // [AKHIR]
       ],
     );
     return compact
