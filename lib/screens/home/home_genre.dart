@@ -21,18 +21,11 @@ mixin HomeGenre on _HomeStateBase {
           crossAxisAlignment: WrapCrossAlignment.center,
           children: [
             ...genre.map(
-              (item) => FilterChip(
+              (item) => ActionChip(
                 label: Text(item),
-                selected: genreFilters.contains(item),
-                onSelected:
-                    (selected) => setState(() {
-                      selected
-                          ? genreFilters.add(item)
-                          : genreFilters.remove(item);
-                    }),
+                onPressed: () => _openGenre(item),
               ),
             ),
-            TextButton(onPressed: _searchGenre, child: const Text('Terapkan')),
           ],
         ),
       ),

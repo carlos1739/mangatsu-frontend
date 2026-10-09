@@ -522,47 +522,50 @@ mixin HomeSections on _HomeStateBase {
           ...sorted.take(5).toList().asMap().entries.map((entry) {
             final rising = entry.key % 3 == 0;
             final stable = entry.key % 3 == 1;
-            return ListTile(
-              dense: true,
-              contentPadding: EdgeInsets.zero,
-              onTap: () => _openMangaDetail(entry.value),
-              leading: Text(
-                '${entry.key + 1}',
-                style: TextStyle(
-                  color: _textColor.withValues(alpha: .55),
-                  fontWeight: FontWeight.w800,
+            return Material(
+              color: Colors.transparent,
+              child: ListTile(
+                dense: true,
+                contentPadding: EdgeInsets.zero,
+                onTap: () => _openMangaDetail(entry.value),
+                leading: Text(
+                  '${entry.key + 1}',
+                  style: TextStyle(
+                    color: _textColor.withValues(alpha: .55),
+                    fontWeight: FontWeight.w800,
+                  ),
                 ),
-              ),
-              title: Text(
-                entry.value.title,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: TextStyle(
-                  color: _textColor,
-                  fontSize: 12,
-                  fontWeight: FontWeight.w700,
+                title: Text(
+                  entry.value.title,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    color: _textColor,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w700,
+                  ),
                 ),
-              ),
-              subtitle: Text(
-                '${entry.value.view} pembaca',
-                style: TextStyle(
-                  color: _textColor.withValues(alpha: .5),
-                  fontSize: 10,
+                subtitle: Text(
+                  '${entry.value.view} pembaca',
+                  style: TextStyle(
+                    color: _textColor.withValues(alpha: .5),
+                    fontSize: 10,
+                  ),
                 ),
-              ),
-              trailing: Icon(
-                stable
-                    ? Icons.horizontal_rule
-                    : rising
-                    ? Icons.arrow_upward
-                    : Icons.arrow_downward,
-                size: 16,
-                color:
-                    stable
-                        ? Colors.grey
-                        : rising
-                        ? Colors.green
-                        : Colors.red,
+                trailing: Icon(
+                  stable
+                      ? Icons.horizontal_rule
+                      : rising
+                      ? Icons.arrow_upward
+                      : Icons.arrow_downward,
+                  size: 16,
+                  color:
+                      stable
+                          ? Colors.grey
+                          : rising
+                          ? Colors.green
+                          : Colors.red,
+                ),
               ),
             );
           }),
@@ -601,60 +604,110 @@ mixin HomeSections on _HomeStateBase {
       return const SliverToBoxAdapter(child: SizedBox.shrink());
     }
     return SliverToBoxAdapter(
-      child: MouseRegion(
-        onEnter: (_) => setState(() => _collectionsHover = true),
-        onExit: (_) => setState(() => _collectionsHover = false),
-        child: Align(
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 1320),
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(18, 0, 18, 24),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  _sectionHeading(
-                    'MC Overpowered dari Awal',
-                    '#Action  #Fantasy  #SoloLevelingVibes',
-                  ),
-                  const SizedBox(height: 12),
-                  Stack(
-                    children: [    
-                      SizedBox(
-                        height: 326,
-                        child: ListView.separated(
-                          scrollDirection: Axis.horizontal,
-                          itemCount:
-                              availableManga.length > 8
-                                  ? 8
-                                  : availableManga.length,
-                          separatorBuilder:
-                              (_, __) => const SizedBox(width: 12),
-                          itemBuilder:
-                              (_, index) =>
-                                  _collectionCard(availableManga[index]),
-                        ),
+      child: Align(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 1320),
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(18, 0, 18, 24),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                _sectionHeading(
+                  'MC Overpowered dari Awal',
+                  '#Action  #Fantasy  #SoloLevelingVibes',
+                ),
+                const SizedBox(height: 12),
+                Stack(
+                  children: [
+                    SizedBox(
+                      height: 326,
+                      child: ListView.separated(
+                        controller: _collectionsScrollController,
+                        scrollDirection: Axis.horizontal,
+                        itemCount:
+                            availableManga.length > 8
+                                ? 8
+                                : availableManga.length,
+                        separatorBuilder: (_, __) => const SizedBox(width: 12),
+                        itemBuilder:
+                            (_, index) =>
+                                _collectionCard(availableManga[index]),
                       ),
-                      if (_collectionsHover)
-                        Positioned(
-                          right: 4,
-                          top: 130,
-                          child: FloatingActionButton.small(
-                            heroTag: 'collection-next',
-                            onPressed:
-                                () => _showMessage(
-                                  'Geser untuk melihat koleksi berikutnya',
+                    ),
+                    Positioned.fill(
+                      child: AnimatedBuilder(
+                        animation: _collectionsScrollController,
+                        builder: (context, child) {
+                          return Stack(
+                            fit: StackFit.expand,
+                            children: [
+                              Positioned(
+                                left: 4,
+                                top: 130,
+                                child: FloatingActionButton.small(
+                                  heroTag: 'collection-previous',
+                                  onPressed: () {
+                                    if (!_collectionsScrollController
+                                        .hasClients) {
+                                      return;
+                                    }
+                                    final position =
+                                        _collectionsScrollController.position;
+                                    final previousOffset = (position.pixels -
+                                            560)
+                                        .clamp(0.0, position.maxScrollExtent);
+                                    _collectionsScrollController.animateTo(
+                                      previousOffset,
+                                      duration: const Duration(
+                                        milliseconds: 350,
+                                      ),
+                                      curve: Curves.easeOutCubic,
+                                    );
+                                  },
+                                  backgroundColor: Colors.black87,
+                                  child: const Icon(
+                                    Icons.chevron_left,
+                                    color: Colors.white,
+                                  ),
                                 ),
-                            backgroundColor: Colors.black87,
-                            child: const Icon(
-                              Icons.chevron_right,
-                              color: Colors.white,
-                            ),
-                          ),
-                        ),
-                    ],
-                  ),
-                ],
-              ),
+                              ),
+                              Positioned(
+                                right: 4,
+                                top: 130,
+                                child: FloatingActionButton.small(
+                                  heroTag: 'collection-next',
+                                  onPressed: () {
+                                    if (!_collectionsScrollController
+                                        .hasClients) {
+                                      return;
+                                    }
+                                    final position =
+                                        _collectionsScrollController.position;
+                                    final nextOffset = (position.pixels + 560)
+                                        .clamp(0.0, position.maxScrollExtent);
+                                    _collectionsScrollController.animateTo(
+                                      nextOffset,
+                                      duration: const Duration(
+                                        milliseconds: 350,
+                                      ),
+                                      curve: Curves.easeOutCubic,
+                                    );
+                                  },
+                                  backgroundColor: Colors.black87,
+                                  child: const Icon(
+                                    Icons.chevron_right,
+                                    color: Colors.white,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          );
+                        },
+                      ),
+                    ),
+                  ],
+                ),
+              ],
             ),
           ),
         ),
