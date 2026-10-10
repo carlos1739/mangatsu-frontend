@@ -6,11 +6,7 @@ class MangaByTitle extends StatelessWidget {
   final String title;
   final List<Manga> komikS;
 
-  const MangaByTitle({
-    super.key,
-    required this.title,
-    required this.komikS,
-  });
+  const MangaByTitle({super.key, required this.title, required this.komikS});
 
   @override
   Widget build(BuildContext context) {
@@ -22,6 +18,7 @@ class MangaByTitle extends StatelessWidget {
         backgroundColor: const Color(0xff171719),
         foregroundColor: Colors.white,
         elevation: 0,
+        automaticallyImplyLeading: false,
         title: const Text(
           'Hasil Pencarian',
           style: TextStyle(fontWeight: FontWeight.w800),

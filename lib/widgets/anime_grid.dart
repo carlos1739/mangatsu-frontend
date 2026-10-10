@@ -48,6 +48,7 @@ class AnimeGrid extends StatelessWidget {
           final anime = komik[index];
           return AnimeCard(
             anime: anime,
+            checkBookmark: false,
             onTap: () {
               Navigator.push(
                 context,
