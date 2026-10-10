@@ -20,13 +20,6 @@ mixin HomeSections on _HomeStateBase {
                   ),
                 ),
                 const Spacer(),
-                TextButton.icon(
-                  onPressed:
-                      genre.isEmpty ? null : () => setState(() => down = !down),
-                  icon: Icon(down ? Icons.tune : Icons.tune_outlined, size: 18),
-                  label: Text(genre.isEmpty ? 'Genre' : 'Genre'),
-                ),
-                const SizedBox(width: 8),
                 DropdownButton<String>(
                   value: _selectedSortOption,
                   hint: const Text('Urutkan'),
@@ -118,6 +111,9 @@ mixin HomeSections on _HomeStateBase {
                     width: 58,
                     height: 78,
                     fit: BoxFit.cover,
+                    filterQuality: FilterQuality.low,
+                    cacheWidth: 116,
+                    cacheHeight: 156,
                   ),
                 ),
                 const SizedBox(width: 10),
@@ -458,8 +454,6 @@ mixin HomeSections on _HomeStateBase {
   }
 
   Widget _trendingSidebar() {
-    final sorted = List<Manga>.from(allManga)
-      ..sort((a, b) => b.view.compareTo(a.view));
     final tabs = ['Harian', 'Mingguan', 'Bulanan'];
     return Container(
       constraints: const BoxConstraints(minHeight: 430),
@@ -519,7 +513,7 @@ mixin HomeSections on _HomeStateBase {
                 }).toList(),
           ),
           Divider(color: _textColor.withValues(alpha: .1)),
-          ...sorted.take(5).toList().asMap().entries.map((entry) {
+          ..._trendingManga.take(5).toList().asMap().entries.map((entry) {
             final rising = entry.key % 3 == 0;
             final stable = entry.key % 3 == 1;
             return Material(
@@ -599,7 +593,7 @@ mixin HomeSections on _HomeStateBase {
   }
 
   Widget _buildCuratedCollections() {
-    final availableManga = allManga.where(_hasReleasedChapter).toList();
+    final availableManga = _releasedManga;
     if (availableManga.isEmpty) {
       return const SliverToBoxAdapter(child: SizedBox.shrink());
     }
@@ -635,74 +629,64 @@ mixin HomeSections on _HomeStateBase {
                       ),
                     ),
                     Positioned.fill(
-                      child: AnimatedBuilder(
-                        animation: _collectionsScrollController,
-                        builder: (context, child) {
-                          return Stack(
-                            fit: StackFit.expand,
-                            children: [
-                              Positioned(
-                                left: 4,
-                                top: 130,
-                                child: FloatingActionButton.small(
-                                  heroTag: 'collection-previous',
-                                  onPressed: () {
-                                    if (!_collectionsScrollController
-                                        .hasClients) {
-                                      return;
-                                    }
-                                    final position =
-                                        _collectionsScrollController.position;
-                                    final previousOffset = (position.pixels -
-                                            560)
-                                        .clamp(0.0, position.maxScrollExtent);
-                                    _collectionsScrollController.animateTo(
-                                      previousOffset,
-                                      duration: const Duration(
-                                        milliseconds: 350,
-                                      ),
-                                      curve: Curves.easeOutCubic,
-                                    );
-                                  },
-                                  backgroundColor: Colors.black87,
-                                  child: const Icon(
-                                    Icons.chevron_left,
-                                    color: Colors.white,
-                                  ),
-                                ),
+                      child: Stack(
+                        fit: StackFit.expand,
+                        children: [
+                          Positioned(
+                            left: 4,
+                            top: 130,
+                            child: FloatingActionButton.small(
+                              heroTag: 'collection-previous',
+                              onPressed: () {
+                                if (!_collectionsScrollController.hasClients) {
+                                  return;
+                                }
+                                final position =
+                                    _collectionsScrollController.position;
+                                final previousOffset = (position.pixels - 560)
+                                    .clamp(0.0, position.maxScrollExtent);
+                                _collectionsScrollController.animateTo(
+                                  previousOffset,
+                                  duration: const Duration(milliseconds: 350),
+                                  curve: Curves.easeOutCubic,
+                                );
+                              },
+                              backgroundColor: Colors.black87,
+                              child: const Icon(
+                                Icons.chevron_left,
+                                color: Colors.white,
                               ),
-                              Positioned(
-                                right: 4,
-                                top: 130,
-                                child: FloatingActionButton.small(
-                                  heroTag: 'collection-next',
-                                  onPressed: () {
-                                    if (!_collectionsScrollController
-                                        .hasClients) {
-                                      return;
-                                    }
-                                    final position =
-                                        _collectionsScrollController.position;
-                                    final nextOffset = (position.pixels + 560)
-                                        .clamp(0.0, position.maxScrollExtent);
-                                    _collectionsScrollController.animateTo(
-                                      nextOffset,
-                                      duration: const Duration(
-                                        milliseconds: 350,
-                                      ),
-                                      curve: Curves.easeOutCubic,
-                                    );
-                                  },
-                                  backgroundColor: Colors.black87,
-                                  child: const Icon(
-                                    Icons.chevron_right,
-                                    color: Colors.white,
-                                  ),
-                                ),
+                            ),
+                          ),
+                          Positioned(
+                            right: 4,
+                            top: 130,
+                            child: FloatingActionButton.small(
+                              heroTag: 'collection-next',
+                              onPressed: () {
+                                if (!_collectionsScrollController.hasClients) {
+                                  return;
+                                }
+                                final position =
+                                    _collectionsScrollController.position;
+                                final nextOffset = (position.pixels + 560).clamp(
+                                  0.0,
+                                  position.maxScrollExtent,
+                                );
+                                _collectionsScrollController.animateTo(
+                                  nextOffset,
+                                  duration: const Duration(milliseconds: 350),
+                                  curve: Curves.easeOutCubic,
+                                );
+                              },
+                              backgroundColor: Colors.black87,
+                              child: const Icon(
+                                Icons.chevron_right,
+                                color: Colors.white,
                               ),
-                            ],
-                          );
-                        },
+                            ),
+                          ),
+                        ],
                       ),
                     ),
                   ],
@@ -731,6 +715,9 @@ mixin HomeSections on _HomeStateBase {
                 width: 170,
                 height: 255,
                 fit: BoxFit.cover,
+                filterQuality: FilterQuality.low,
+                cacheWidth: 340,
+                cacheHeight: 510,
               ),
             ),
             const SizedBox(height: 6),
@@ -802,6 +789,9 @@ mixin HomeSections on _HomeStateBase {
                                     width: 44,
                                     height: 56,
                                     fit: BoxFit.cover,
+                                    filterQuality: FilterQuality.low,
+                                    cacheWidth: 88,
+                                    cacheHeight: 112,
                                   ),
                                 ),
                                 const SizedBox(width: 10),

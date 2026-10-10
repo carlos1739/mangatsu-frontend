@@ -41,38 +41,44 @@ mixin HomeView on _HomeStateBase {
           Expanded(
             child: ConstrainedBox(
               constraints: const BoxConstraints(maxWidth: 620),
-              child: TextField(
-                controller: _searchController,
-                onSubmitted: _search,
-                style: const TextStyle(color: Colors.white),
-                decoration: InputDecoration(
-                  hintText: 'Cari judul manga, author, atau genre...',
-                  hintStyle: TextStyle(
-                    color: Colors.white.withValues(alpha: .6),
-                  ),
-                  prefixIcon: IconButton(
-                    tooltip: 'Cari',
-                    onPressed: () => _search(_searchController.text),
-                    icon: const Icon(Icons.search, color: Colors.white70),
-                  ),
-                  suffixIcon:
-                      _searchController.text.isEmpty
-                          ? null
-                          : IconButton(
-                            icon: const Icon(
-                              Icons.close,
-                              color: Colors.white70,
-                            ),
-                            onPressed: _searchController.clear,
-                          ),
-                  filled: true,
-                  fillColor: Colors.white.withValues(alpha: .12),
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(14),
-                    borderSide: BorderSide.none,
-                  ),
-                  contentPadding: const EdgeInsets.symmetric(vertical: 14),
-                ),
+              child: ValueListenableBuilder<TextEditingValue>(
+                valueListenable: _searchController,
+                builder:
+                    (context, value, child) => TextField(
+                      controller: _searchController,
+                      onSubmitted: _search,
+                      style: const TextStyle(color: Colors.white),
+                      decoration: InputDecoration(
+                        hintText: 'Cari judul manga, author, atau genre...',
+                        hintStyle: TextStyle(
+                          color: Colors.white.withValues(alpha: .6),
+                        ),
+                        prefixIcon: IconButton(
+                          tooltip: 'Cari',
+                          onPressed: () => _search(_searchController.text),
+                          icon: const Icon(Icons.search, color: Colors.white70),
+                        ),
+                        suffixIcon:
+                            value.text.isEmpty
+                                ? null
+                                : IconButton(
+                                  icon: const Icon(
+                                    Icons.close,
+                                    color: Colors.white70,
+                                  ),
+                                  onPressed: _searchController.clear,
+                                ),
+                        filled: true,
+                        fillColor: Colors.white.withValues(alpha: .12),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(14),
+                          borderSide: BorderSide.none,
+                        ),
+                        contentPadding: const EdgeInsets.symmetric(
+                          vertical: 14,
+                        ),
+                      ),
+                    ),
               ),
             ),
           ),
@@ -88,11 +94,25 @@ mixin HomeView on _HomeStateBase {
           ),
         ),
         IconButton(
-          tooltip: 'Ganti mode tampilan',
+          tooltip:
+              _isDark
+                  ? 'Mode gelap'
+                  : _isSepia
+                  ? 'Mode sepia'
+                  : 'Mode terang',
           onPressed: _cycleAppearance,
-          icon: Icon(
-            _isDark ? Icons.dark_mode : Icons.palette_outlined,
-            color: Colors.white,
+          icon: ValueListenableBuilder<int>(
+            valueListenable: appearanceController,
+            builder: (context, appearance, _) {
+              return Icon(
+                appearance == 1
+                    ? Icons.dark_mode
+                    : appearance == 2
+                    ? Icons.auto_awesome
+                    : Icons.light_mode,
+                color: Colors.white,
+              );
+            },
           ),
         ),
         IconButton(
@@ -119,45 +139,55 @@ mixin HomeView on _HomeStateBase {
 
   Widget _buildSearchDropdown() {
     return SliverToBoxAdapter(
-      child: Container(
-        margin: const EdgeInsets.fromLTRB(120, 8, 120, 0),
-        constraints: const BoxConstraints(maxWidth: 620),
-        decoration: BoxDecoration(
-          color: _surface,
-          borderRadius: BorderRadius.circular(14),
-          boxShadow: const [BoxShadow(color: Colors.black26, blurRadius: 18)],
-        ),
-        child: Column(
-          children:
-              _searchResults
-                  .map(
-                    (manga) => ListTile(
-                      onTap: () {
-                        _searchController.text = manga.title;
-                        _openMangaDetail(manga);
-                      },
-                      leading: ClipRRect(
-                        borderRadius: BorderRadius.circular(5),
-                        child: Image.network(
-                          manga.linkGambar,
-                          width: 38,
-                          height: 48,
-                          fit: BoxFit.cover,
-                        ),
-                      ),
-                      title: Text(
-                        manga.title,
-                        style: TextStyle(
-                          color: _textColor,
-                          fontWeight: FontWeight.w700,
-                        ),
-                      ),
-                      trailing: _statusBadge(manga.status),
-                    ),
-                  )
-                  .toList(),
+      child: ValueListenableBuilder<TextEditingValue>(
+        valueListenable: _searchController,
+        builder: (context, value, child) {
+          if (_searchResults.isEmpty) return const SizedBox.shrink();
+          return Container(
+            margin: const EdgeInsets.fromLTRB(120, 8, 120, 0),
+            constraints: const BoxConstraints(maxWidth: 620),
+            decoration: BoxDecoration(
+              color: _surface,
+              borderRadius: BorderRadius.circular(14),
+              boxShadow: const [
+                BoxShadow(color: Colors.black26, blurRadius: 18),
+              ],
+            ),
+            child: Column(
+              children:
+                  _searchResults
+                      .map((manga) => _searchResultTile(manga))
+                      .toList(),
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _searchResultTile(Manga manga) {
+    return ListTile(
+      onTap: () {
+        _searchController.text = manga.title;
+        _openMangaDetail(manga);
+      },
+      leading: ClipRRect(
+        borderRadius: BorderRadius.circular(5),
+        child: Image.network(
+          manga.linkGambar,
+          width: 38,
+          height: 48,
+          fit: BoxFit.cover,
+          filterQuality: FilterQuality.low,
+          cacheWidth: 76,
+          cacheHeight: 96,
         ),
       ),
+      title: Text(
+        manga.title,
+        style: TextStyle(color: _textColor, fontWeight: FontWeight.w700),
+      ),
+      trailing: _statusBadge(manga.status),
     );
   }
 
@@ -201,12 +231,15 @@ mixin HomeView on _HomeStateBase {
                 child: InkWell(
                   onTap: () {
                     if (categories[index] == 'Genres') {
-                      setState(() => down = !down);
+                      Navigator.pushNamed(context, '/genres');
+                      return;
                     }
                     if (categories[index] == 'Surprise Me!' &&
-                        allManga.isNotEmpty) {
+                        _releasedManga.isNotEmpty) {
                       setState(
-                        () => _heroIndex = (_heroIndex + 1) % allManga.length,
+                        () =>
+                            _heroIndex.value =
+                                (_heroIndex.value + 1) % _releasedManga.length,
                       );
                     }
                   },

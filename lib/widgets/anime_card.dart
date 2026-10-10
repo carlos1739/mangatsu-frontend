@@ -11,7 +11,7 @@ class AnimeCard extends StatefulWidget {
     super.key,
     required this.anime,
     this.onTap,
-    this.checkBookmark = true,
+    this.checkBookmark = false,
   });
 
   @override
@@ -34,6 +34,7 @@ class _AnimeCardState extends State<AnimeCard> {
   Future<void> _checkBookmark() async {
     try {
       final bookmarked = await ApiService.isBookmarked(widget.anime.id);
+      if (!mounted) return;
       setState(() {
         isBookmarked = bookmarked;
       });
@@ -96,18 +97,18 @@ class _AnimeCardState extends State<AnimeCard> {
                     borderRadius: const BorderRadius.vertical(
                       top: Radius.circular(8),
                     ),
-                    child: Hero(
-                      tag: 'anime-image-${widget.anime.id}',
-                      child: Image.network(
-                        widget.anime.linkGambar,
-                        width: double.infinity,
-                        fit: BoxFit.cover,
-                        errorBuilder: (context, error, stackTrace) =>
-                            const Center(
-                          child: Icon(Icons.error, color: Colors.red),
-                        ),
+                    child: Image.network(
+                      widget.anime.linkGambar,
+                      width: double.infinity,
+                      fit: BoxFit.cover,
+                      filterQuality: FilterQuality.low,
+                      cacheWidth: 480,
+                      cacheHeight: 720,
+                      errorBuilder:
+                          (context, error, stackTrace) => const Center(
+                            child: Icon(Icons.error, color: Colors.red),
+                          ),
                       ),
-                    ),
                   ),
                 ),
                 Padding(

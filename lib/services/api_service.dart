@@ -2,17 +2,19 @@ import 'dart:developer' as developer;
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import '../models/manga.dart';
-// >>> TAMBAHAN 1: untuk membaca id user yang sedang login
 import 'package:project_manga/screens/auth/user/user_session.dart';
-// <<< SELESAI TAMBAHAN 1
 
 class ApiService {
   static const String baseUrl = 'http://127.0.0.1:5000/api';
   static const Duration timeout = Duration(seconds: 30);
+  static List<Manga>? _mangaCache;
 
   // ============ MANGA ENDPOINTS ============
 
   static Future<List<Manga>> getAllManga() async {
+    if (_mangaCache != null) {
+      return List<Manga>.of(_mangaCache!);
+    }
     try {
       final response = await http
           .get(Uri.parse('$baseUrl/manga'))
@@ -21,7 +23,9 @@ class ApiService {
       if (response.statusCode == 200) {
         final jsonData = jsonDecode(response.body);
         final List<dynamic> data = jsonData['data'] ?? [];
-        return data.map((item) => Manga.fromApiJson(item)).toList();
+        final manga = data.map((item) => Manga.fromApiJson(item)).toList();
+        _mangaCache = manga;
+        return List<Manga>.of(manga);
       } else {
         throw Exception('Failed to load manga: ${response.statusCode}');
       }
@@ -34,7 +38,11 @@ class ApiService {
   static Future<List<Manga>> searchManga(String query) async {
     try {
       final response = await http
-          .get(Uri.parse('$baseUrl/manga/search?q=$query'))
+          .get(
+            Uri.parse(
+              '$baseUrl/manga/search?q=${Uri.encodeQueryComponent(query)}',
+            ),
+          )
           .timeout(timeout);
 
       if (response.statusCode == 200) {
@@ -68,39 +76,65 @@ class ApiService {
 
   static Future<List<Manga>> getMangaByGenre(List<String> genres) async {
     try {
-      final response = await http
-          .get(Uri.parse('$baseUrl/manga'))
-          .timeout(timeout);
+      final manga = await getAllManga();
+      final matches = _filterByGenres(manga, genres);
+      if (matches.isNotEmpty) return matches;
 
-      if (response.statusCode == 200) {
-        final jsonData = jsonDecode(response.body);
-        final List<dynamic> data = jsonData['data'] ?? [];
-
-        return data
-            .map((item) => Manga.fromApiJson(item))
-            .where(
-              (manga) => genres.every((genre) => manga.genre.contains(genre)),
-            )
-            .toList();
-      } else {
-        throw Exception('Failed to load by genre');
+      final searchResults = <Manga>[];
+      for (final genre in genres) {
+        searchResults.addAll(await searchManga(genre));
       }
+      final unique = <String, Manga>{
+        for (final item in searchResults) _mangaKey(item): item,
+      };
+      return _filterByGenres(unique.values.toList(), genres);
     } catch (e) {
       rethrow;
     }
   }
 
+  static List<Manga> _filterByGenres(List<Manga> manga, List<String> genres) {
+    return manga
+        .where(
+          (item) => genres.every(
+            (genre) => item.genre.any(
+              (value) =>
+                  value.trim().toLowerCase() == genre.trim().toLowerCase(),
+            ),
+          ),
+        )
+        .toList();
+  }
+
+  static String _mangaKey(Manga manga) =>
+      manga.id > 0 ? 'id:${manga.id}' : 'title:${manga.title.toLowerCase()}';
+
   // ============ BOOKMARK ENDPOINTS ============
   // >>> TAMBAHAN 2: seluruh blok bookmark ditulis ulang agar membawa user_id
 
-  // Ambil id user yang login; kalau belum login, lempar error
   static int _requireUserId() {
-    final id = UserSession.id;
-    if (id == null) {
+    final userId = UserSession.id;
+    if (userId == null) {
       throw Exception('Login dulu untuk memakai bookmark');
     }
-    return id;
+    return userId;
   }
+
+  static Future<void> addBookmark(Manga manga) async {
+    final userId = _requireUserId();
+    try {
+      final response = await http
+          .post(
+            Uri.parse('$baseUrl/bookmark'),
+            headers: {'Content-Type': 'application/json'},
+            body: jsonEncode({
+              'user_id': userId,
+              'manga_id': manga.id,
+              'title': manga.title,
+              'image_url': manga.linkGambar,
+            }),
+          )
+          .timeout(timeout);
 
   // >>> BARU: menyimpan status baca tiap bookmark (diisi saat getBookmarks dipanggil)
   static final Map<int, String> bookmarkStatus = {};
@@ -117,44 +151,25 @@ class ApiService {
     }
   }
 
-  // Simpan bookmark
-  static Future<void> addBookmark(Manga manga) async {
-    final userId = _requireUserId();
-    final response = await http
-        .post(
-          Uri.parse('$baseUrl/bookmark'),
-          headers: {'Content-Type': 'application/json'},
-          body: jsonEncode({
-            'user_id': userId,
-            'manga_id': manga.id,
-            'title': manga.title,
-            'image_url': manga.linkGambar,
-          }),
-        )
-        .timeout(timeout);
-
-    if (response.statusCode != 201) {
-      throw Exception('Failed to bookmark');
-    }
-  }
-
-  // >>> DIUBAH: sekarang juga mengisi bookmarkStatus
-  // Ambil semua bookmark milik user (Rak Buku)
   static Future<List<Manga>> getBookmarks() async {
     final userId = _requireUserId();
-    final response = await http
-        .get(Uri.parse('$baseUrl/bookmark?user_id=$userId'))
-        .timeout(timeout);
+    try {
+      final response = await http
+          .get(
+            Uri.parse(
+              '$baseUrl/bookmark?user_id=${Uri.encodeQueryComponent('$userId')}',
+            ),
+          )
+          .timeout(timeout);
 
-    if (response.statusCode == 200) {
-      final jsonData = jsonDecode(response.body);
-      final List<dynamic> data = jsonData['data'] ?? [];
-      bookmarkStatus.clear();
-      for (final item in data) {
-        final id = item['mal_id'];
-        if (id is int) {
-          bookmarkStatus[id] = item['read_status']?.toString() ?? 'plan';
-        }
+      if (response.statusCode == 200) {
+        final jsonData = jsonDecode(response.body);
+        final List<dynamic> data = jsonData['data'] ?? [];
+        return data.map((item) => Manga.fromApiJson(item)).toList();
+      } else if (response.statusCode == 401) {
+        throw Exception('Sesi login tidak valid untuk memuat bookmark');
+      } else {
+        throw Exception('Failed to load bookmarks');
       }
       return data.map((item) => Manga.fromApiJson(item)).toList();
     }
@@ -167,7 +182,11 @@ class ApiService {
     if (userId == null) return false;
     try {
       final response = await http
-          .get(Uri.parse('$baseUrl/bookmark/$mangaId?user_id=$userId'))
+          .get(
+            Uri.parse(
+              '$baseUrl/bookmark/$mangaId?user_id=${Uri.encodeQueryComponent('$userId')}',
+            ),
+          )
           .timeout(timeout);
 
       if (response.statusCode == 200) {
@@ -181,19 +200,22 @@ class ApiService {
     }
   }
 
-  // >>> BARU: status baca satu manga; null kalau belum di-bookmark
-  static Future<String?> getBookmarkStatus(int mangaId) async {
-    final userId = UserSession.id;
-    if (userId == null) return null;
+  static Future<void> removeBookmark(int mangaId) async {
+    final userId = _requireUserId();
     try {
       final response = await http
-          .get(Uri.parse('$baseUrl/bookmark/$mangaId?user_id=$userId'))
+          .delete(
+            Uri.parse(
+              '$baseUrl/bookmark/$mangaId?user_id=${Uri.encodeQueryComponent('$userId')}',
+            ),
+          )
           .timeout(timeout);
-      if (response.statusCode == 200) {
-        final jsonData = jsonDecode(response.body);
-        if (jsonData['isBookmarked'] == true) {
-          return jsonData['readStatus']?.toString() ?? 'plan';
-        }
+
+      if (response.statusCode == 401) {
+        throw Exception('Sesi login tidak valid untuk menghapus bookmark');
+      }
+      if (response.statusCode != 200) {
+        throw Exception('Failed to remove bookmark');
       }
       return null;
     } catch (e) {
