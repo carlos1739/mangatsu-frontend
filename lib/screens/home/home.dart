@@ -15,7 +15,6 @@ import 'package:project_manga/screens/auth/login.dart';
 part 'home_view.dart';
 part 'home_hero.dart';
 part 'home_sections.dart';
-part 'home_genre.dart';
 
 class Beranda extends StatefulWidget {
   const Beranda({super.key});
@@ -368,7 +367,7 @@ abstract class _HomeStateBase extends State<Beranda> {
 }
 
 class _BerandaState extends _HomeStateBase
-    with HomeView, HomeHero, HomeSections, HomeGenre {
+    with HomeView, HomeHero, HomeSections {
   @override
   Widget build(BuildContext context) {
     return Theme(
@@ -395,7 +394,6 @@ class _BerandaState extends _HomeStateBase
                     if (_showLibrary) _buildLibrarySection(),
                     _buildHero(),
                     _buildFilterBar(),
-                    if (down && genre.isNotEmpty) _buildGenrePanel(),
                     _buildContinueReading(),
                     _buildLatestAndTrending(),
                     _buildCuratedCollections(),
