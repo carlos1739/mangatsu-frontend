@@ -1,9 +1,8 @@
 // ignore_for_file: unused_element
 
 import 'dart:async';
-import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
-import 'package:project_manga/screens/catalog/by_genre.dart';
+import 'package:project_manga/services/appearance_controller.dart';
 import 'package:project_manga/screens/catalog/by_title.dart';
 import 'package:project_manga/screens/catalog/manga_detail.dart';
 import 'package:project_manga/models/manga.dart';
@@ -26,15 +25,14 @@ class Beranda extends StatefulWidget {
 abstract class _HomeStateBase extends State<Beranda> {
   List<Manga> allManga = [];
   List<Manga> displayedManga = [];
-  List<String> genre = allGenre;
-  final Set<String> genreFilters = {};
   final TextEditingController _searchController = TextEditingController();
   Timer? _carouselTimer;
   final ScrollController _collectionsScrollController = ScrollController();
-  int _heroIndex = 0;
-  int _appearance = 0;
+  Future<List<Manga>>? _bookmarksFuture;
+  List<Manga> _releasedManga = [];
+  List<Manga> _trendingManga = [];
+  final ValueNotifier<int> _heroIndex = ValueNotifier(0);
   bool isLoading = true;
-  bool down = false;
   String? errorMessage;
   String? _selectedSortOption;
   int _visibleUpdates = 8;
@@ -42,6 +40,7 @@ abstract class _HomeStateBase extends State<Beranda> {
   final Set<int> _removedHistory = {};
   bool _showLibrary = false;
 
+  int get _appearance => appearanceController.value;
   bool get _isDark => _appearance == 1;
   bool get _isSepia => _appearance == 2;
 
@@ -64,7 +63,6 @@ abstract class _HomeStateBase extends State<Beranda> {
   @override
   void initState() {
     super.initState();
-    _searchController.addListener(() => setState(() {}));
     _loadManga();
   }
 
@@ -79,14 +77,9 @@ abstract class _HomeStateBase extends State<Beranda> {
       setState(() {
         allManga = manga;
         displayedManga = manga;
-        genre =
-            manga
-                .expand((item) => item.genre)
-                .map((item) => item.trim())
-                .where((item) => item.isNotEmpty)
-                .toSet()
-                .toList()
-              ..sort();
+        _releasedManga = manga.where(_hasReleasedChapter).toList();
+        _trendingManga = List<Manga>.of(manga)
+          ..sort((a, b) => b.view.compareTo(a.view));
         isLoading = false;
       });
       _startCarousel();
@@ -101,10 +94,10 @@ abstract class _HomeStateBase extends State<Beranda> {
 
   void _startCarousel() {
     _carouselTimer?.cancel();
-    if (allManga.length < 2) return;
+    if (_releasedManga.length < 2) return;
     _carouselTimer = Timer.periodic(const Duration(seconds: 6), (_) {
       if (mounted) {
-        setState(() => _heroIndex = (_heroIndex + 1) % allManga.length);
+        _heroIndex.value = (_heroIndex.value + 1) % _releasedManga.length;
       }
     });
   }
@@ -134,29 +127,6 @@ abstract class _HomeStateBase extends State<Beranda> {
     }
   }
 
-  Future<void> _searchGenre() async {
-    try {
-      final result = await ApiService.getMangaByGenre(genreFilters.toList());
-      if (!mounted) return;
-      Navigator.push(
-        context,
-        MaterialPageRoute(
-          builder:
-              (_) => Bygenre(genreName: genreFilters.join(', '), manga: result),
-        ),
-      );
-    } catch (e) {
-      _showMessage('Filter genre gagal: $e');
-    }
-  }
-
-  void _openGenre(String selectedGenre) {
-    Navigator.pushNamed(
-      context,
-      '/genre/${Uri.encodeComponent(selectedGenre)}',
-    );
-  }
-
   void _filterAndSort(String? value) {
     if (value == null) return;
     setState(() {
@@ -183,13 +153,11 @@ abstract class _HomeStateBase extends State<Beranda> {
   }
 
   void _openMangaDetail(Manga manga) {
-    final recommendations =
-        allManga.where((item) => _hasReleasedChapter(item)).toList();
     Navigator.push(
       context,
       MaterialPageRoute(
         builder:
-            (_) => MangaDetail(manga: manga, recommendations: recommendations),
+            (_) => MangaDetail(manga: manga, recommendations: _releasedManga),
       ),
     );
   }
@@ -204,14 +172,7 @@ abstract class _HomeStateBase extends State<Beranda> {
   }
 
   void _cycleAppearance() {
-    setState(() => _appearance = (_appearance + 1) % 3);
-    _showMessage(
-      _appearance == 0
-          ? 'Mode terang'
-          : _appearance == 1
-          ? 'Mode gelap'
-          : 'Mode sepia',
-    );
+    appearanceController.cycle();
   }
 
   void _openLibrary() {
@@ -246,7 +207,10 @@ abstract class _HomeStateBase extends State<Beranda> {
       );
       return;
     }
-    setState(() => _showLibrary = true);
+    setState(() {
+      _showLibrary = true;
+      _bookmarksFuture ??= ApiService.getBookmarks();
+    });
   }
 
   Widget _buildLibrarySection() {
@@ -264,7 +228,7 @@ abstract class _HomeStateBase extends State<Beranda> {
                 border: Border.all(color: _textColor.withValues(alpha: .08)),
               ),
               child: FutureBuilder<List<Manga>>(
-                future: ApiService.getBookmarks(),
+                future: _bookmarksFuture,
                 builder: (context, snapshot) {
                   if (snapshot.connectionState != ConnectionState.done) {
                     return const SizedBox(
@@ -333,6 +297,9 @@ abstract class _HomeStateBase extends State<Beranda> {
                                             manga.linkGambar,
                                             width: 130,
                                             fit: BoxFit.cover,
+                                            filterQuality: FilterQuality.low,
+                                            cacheWidth: 260,
+                                            cacheHeight: 320,
                                           ),
                                         ),
                                       ),
@@ -370,45 +337,53 @@ class _BerandaState extends _HomeStateBase
     with HomeView, HomeHero, HomeSections {
   @override
   Widget build(BuildContext context) {
-    return Theme(
-      data: Theme.of(context).copyWith(
-        scaffoldBackgroundColor: _background,
-        colorScheme: Theme.of(context).colorScheme.copyWith(
-          primary: const Color(0xff8d4de8),
-          surface: _surface,
-        ),
-        textTheme: Theme.of(context).textTheme.apply(bodyColor: _textColor),
-      ),
-      child: Scaffold(
-        backgroundColor: _background,
-        body:
-            isLoading
-                ? const Center(child: CircularProgressIndicator())
-                : errorMessage != null
-                ? _errorState()
-                : CustomScrollView(
-                  slivers: [
-                    _buildHeader(),
-                    if (_searchResults.isNotEmpty) _buildSearchDropdown(),
-                    _buildCategoryMenu(),
-                    if (_showLibrary) _buildLibrarySection(),
-                    _buildHero(),
-                    _buildFilterBar(),
-                    _buildContinueReading(),
-                    _buildLatestAndTrending(),
-                    _buildCuratedCollections(),
-                    _buildCommunitySnippets(),
-                    _buildFooter(),
-                  ],
-                ),
-      ),
+    return ValueListenableBuilder<int>(
+      valueListenable: appearanceController,
+      builder: (context, _, child) {
+        return Theme(
+          data: Theme.of(context).copyWith(
+            scaffoldBackgroundColor: _background,
+            colorScheme: Theme.of(context).colorScheme.copyWith(
+              primary: const Color(0xff8d4de8),
+              surface: _surface,
+            ),
+            textTheme: Theme.of(context).textTheme.apply(bodyColor: _textColor),
+          ),
+          child: Scaffold(
+            backgroundColor: _background,
+            body:
+                isLoading
+                    ? const Center(child: CircularProgressIndicator())
+                    : errorMessage != null
+                    ? _errorState()
+                    : RepaintBoundary(
+                      child: CustomScrollView(
+                        slivers: [
+                          _buildHeader(),
+                          if (_searchResults.isNotEmpty) _buildSearchDropdown(),
+                          _buildCategoryMenu(),
+                          if (_showLibrary) _buildLibrarySection(),
+                          _buildHero(),
+                          _buildFilterBar(),
+                          _buildContinueReading(),
+                          _buildLatestAndTrending(),
+                          _buildCuratedCollections(),
+                          _buildCommunitySnippets(),
+                          _buildFooter(),
+                        ],
+                      ),
+                    ),
+          ),
+        );
+      },
     );
   }
 
-  // UI is split into home_view.dart, home_hero.dart, home_sections.dart, and home_genre.dart.
+  // UI is split into home_view.dart, home_hero.dart, and home_sections.dart.
   @override
   void dispose() {
     _carouselTimer?.cancel();
+    _heroIndex.dispose();
     _collectionsScrollController.dispose();
     _searchController.dispose();
     super.dispose();

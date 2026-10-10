@@ -3,78 +3,92 @@ part of 'home.dart';
 
 mixin HomeHero on _HomeStateBase {
   Widget _buildHero() {
-    final recommendations =
-        allManga.where(_hasReleasedChapter).toList();
-    if (recommendations.isEmpty) {
+    if (_releasedManga.isEmpty) {
       return const SliverToBoxAdapter(child: SizedBox.shrink());
     }
-    final manga = recommendations[_heroIndex % recommendations.length];
     return SliverToBoxAdapter(
-      child: Align(
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 1320),
-          child: Container(
-            height: 286,
-            margin: const EdgeInsets.fromLTRB(18, 8, 18, 20),
-            clipBehavior: Clip.antiAlias,
-            decoration: BoxDecoration(borderRadius: BorderRadius.circular(20)),
-            child: Stack(
-              fit: StackFit.expand,
-              children: [
-                ImageFiltered(
-                  imageFilter: ui.ImageFilter.blur(sigmaX: 9, sigmaY: 9),
-                  child: Image.network(manga.linkGambar, fit: BoxFit.cover),
+      child: ValueListenableBuilder<int>(
+        valueListenable: _heroIndex,
+        builder: (context, heroIndex, child) {
+          final manga = _releasedManga[heroIndex % _releasedManga.length];
+          return Align(
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 1320),
+              child: Container(
+                height: 286,
+                margin: const EdgeInsets.fromLTRB(18, 8, 18, 20),
+                clipBehavior: Clip.antiAlias,
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(20),
                 ),
-                Container(color: Colors.black.withValues(alpha: .28)),
-                DecoratedBox(
-                  decoration: const BoxDecoration(
-                    gradient: LinearGradient(
-                      colors: [
-                        Color(0xee100d15),
-                        Color(0x99100d15),
-                        Color(0x22100d15),
-                      ],
-                      begin: Alignment.centerLeft,
-                      end: Alignment.centerRight,
+                child: Stack(
+                  fit: StackFit.expand,
+                  children: [
+                    Image.network(
+                      manga.linkGambar,
+                      fit: BoxFit.cover,
+                      filterQuality: FilterQuality.low,
+                      cacheWidth: 960,
+                      cacheHeight: 572,
                     ),
-                  ),
-                ),
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(26, 22, 22, 20),
-                  child: Row(
-                    children: [
-                      Expanded(child: _heroInfo(manga)),
-                      const SizedBox(width: 18),
-                      Transform.rotate(
-                        angle: .08,
-                        child: Container(
-                          width: 112,
-                          height: 170,
-                          decoration: BoxDecoration(
-                            borderRadius: BorderRadius.circular(10),
-                            boxShadow: const [
-                              BoxShadow(color: Colors.black87, blurRadius: 18),
-                            ],
-                          ),
-                          clipBehavior: Clip.antiAlias,
-                          child: Image.network(
-                            manga.linkGambar,
-                            fit: BoxFit.cover,
-                            errorBuilder:
-                                (_, __, ___) => const ColoredBox(
-                                  color: Colors.black26,
-                                  child: Icon(Icons.image_not_supported),
-                                ),
-                          ),
+                    Container(color: Colors.black.withValues(alpha: .28)),
+                    DecoratedBox(
+                      decoration: const BoxDecoration(
+                        gradient: LinearGradient(
+                          colors: [
+                            Color(0xee100d15),
+                            Color(0x99100d15),
+                            Color(0x22100d15),
+                          ],
+                          begin: Alignment.centerLeft,
+                          end: Alignment.centerRight,
                         ),
                       ),
-                    ],
-                  ),
+                    ),
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(26, 22, 22, 20),
+                      child: Row(
+                        children: [
+                          Expanded(child: _heroInfo(manga)),
+                          const SizedBox(width: 18),
+                          Transform.rotate(
+                            angle: .08,
+                            child: Container(
+                              width: 112,
+                              height: 170,
+                              decoration: BoxDecoration(
+                                borderRadius: BorderRadius.circular(10),
+                                boxShadow: const [
+                                  BoxShadow(
+                                    color: Colors.black87,
+                                    blurRadius: 18,
+                                  ),
+                                ],
+                              ),
+                              clipBehavior: Clip.antiAlias,
+                              child: Image.network(
+                                manga.linkGambar,
+                                fit: BoxFit.cover,
+                                filterQuality: FilterQuality.low,
+                                cacheWidth: 224,
+                                cacheHeight: 340,
+                                errorBuilder:
+                                    (_, __, ___) => const ColoredBox(
+                                      color: Colors.black26,
+                                      child: Icon(Icons.image_not_supported),
+                                    ),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
                 ),
-              ],
+              ),
             ),
-          ),
-        ),
+          );
+        },
       ),
     );
   }

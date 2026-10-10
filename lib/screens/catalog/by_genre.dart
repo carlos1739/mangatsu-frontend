@@ -16,6 +16,8 @@ class Bygenre extends StatefulWidget {
 
 class _BygenreState extends State<Bygenre> {
   late final Future<List<Manga>> _mangaFuture;
+  static const _pageSize = 30;
+  int _currentPage = 1;
 
   @override
   void initState() {
@@ -34,8 +36,9 @@ class _BygenreState extends State<Bygenre> {
         backgroundColor: const Color(0xff17131d),
         foregroundColor: Colors.white,
         elevation: 0,
+        automaticallyImplyLeading: false,
         title: Text(
-          'Genre: ${widget.genreName}',
+          widget.genreName,
           style: const TextStyle(fontWeight: FontWeight.w800),
         ),
       ),
@@ -57,6 +60,14 @@ class _BygenreState extends State<Bygenre> {
             );
           }
           final manga = snapshot.data ?? <Manga>[];
+          final pageCount = (manga.length / _pageSize).ceil();
+          final safePage =
+              pageCount == 0 ? 1 : _currentPage.clamp(1, pageCount);
+          final start = (safePage - 1) * _pageSize;
+          final pageManga = manga
+              .skip(start)
+              .take(_pageSize)
+              .toList(growable: false);
           return CustomScrollView(
             slivers: [
               SliverToBoxAdapter(
@@ -81,10 +92,50 @@ class _BygenreState extends State<Bygenre> {
                   ),
                 )
               else
-                AnimeGrid(komik: manga),
+                AnimeGrid(komik: pageManga),
+              if (manga.isNotEmpty && pageCount > 1)
+                SliverToBoxAdapter(child: _pagination(pageCount, safePage)),
             ],
           );
         },
+      ),
+    );
+  }
+
+  Widget _pagination(int pageCount, int currentPage) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(20, 4, 20, 32),
+      child: Wrap(
+        alignment: WrapAlignment.center,
+        spacing: 8,
+        runSpacing: 8,
+        children: [
+          for (var page = 1; page <= pageCount; page++)
+            OutlinedButton(
+              onPressed:
+                  page == currentPage
+                      ? null
+                      : () => setState(() => _currentPage = page),
+              style: OutlinedButton.styleFrom(
+                foregroundColor: Colors.white,
+                disabledForegroundColor: Colors.white,
+                backgroundColor:
+                    page == currentPage
+                        ? const Color(0xff9a5bea)
+                        : Colors.transparent,
+                side: BorderSide(
+                  color:
+                      page == currentPage
+                          ? const Color(0xff9a5bea)
+                          : Colors.white24,
+                ),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(9),
+                ),
+              ),
+              child: Text('$page'),
+            ),
+        ],
       ),
     );
   }

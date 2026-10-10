@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:project_manga/models/manga.dart';
 import 'package:project_manga/services/api_service.dart';
 import 'package:project_manga/widgets/anime_card.dart';
+import 'package:project_manga/services/appearance_controller.dart';
 
 class MangaDetail extends StatefulWidget {
   final Manga manga;
@@ -25,10 +26,11 @@ class _MangaDetailState extends State<MangaDetail> {
   bool _showFullSynopsis = false;
   bool _bookmarked = false;
   bool _bookmarkLoading = false;
-  String _readStatus = 'plan';   // <-- baru
+  String _readStatus = 'plan'; // <-- baru
   int _visibleComments = 3;
-  int _appearance = 1;
+  int get _appearance => appearanceController.value;
   Manga? _loadedManga;
+  List<int> _visibleChapters = const [];
 
   Manga get _currentManga => _loadedManga ?? widget.manga;
   bool get _isDark => _appearance == 1;
@@ -50,10 +52,16 @@ class _MangaDetailState extends State<MangaDetail> {
   @override
   void initState() {
     super.initState();
+    appearanceController.addListener(_onAppearanceChanged);
     _bookmarked = _currentManga.bookmark;
+    _rebuildChapters();
     _checkBookmark();
     _loadMangaDetail();
-    _chapterSearch.addListener(() => setState(() {}));
+    _chapterSearch.addListener(_onChapterSearchChanged);
+  }
+
+  void _onAppearanceChanged() {
+    if (mounted) setState(() {});
   }
 
   Future<void> _loadMangaDetail() async {
@@ -130,7 +138,12 @@ class _MangaDetailState extends State<MangaDetail> {
 
   int get _chapterCount => int.tryParse(_currentManga.chapter) ?? 0;
 
-  List<int> get _chapters {
+  void _onChapterSearchChanged() {
+    if (!mounted) return;
+    setState(_rebuildChapters);
+  }
+
+  void _rebuildChapters() {
     final query = _chapterSearch.text.trim().toLowerCase().replaceFirst(
       RegExp(r'^chapter\s*'),
       '',
@@ -142,22 +155,11 @@ class _MangaDetailState extends State<MangaDetail> {
             : chapters
                 .where((chapter) => chapter.toString().contains(query))
                 .toList();
-    return _sortNewest ? filtered.reversed.toList() : filtered;
+    _visibleChapters = _sortNewest ? filtered.reversed.toList() : filtered;
   }
 
   void _cycleAppearance() {
-    setState(() => _appearance = (_appearance + 1) % 3);
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(
-          _appearance == 0
-              ? 'Mode terang'
-              : _appearance == 1
-              ? 'Mode gelap'
-              : 'Mode sepia',
-        ),
-      ),
-    );
+    appearanceController.cycle();
   }
 
   void _goHome() {
@@ -208,7 +210,11 @@ class _MangaDetailState extends State<MangaDetail> {
               tooltip: 'Ganti mode tampilan',
               onPressed: _cycleAppearance,
               icon: Icon(
-                _isDark ? Icons.dark_mode : Icons.palette_outlined,
+                _isDark
+                    ? Icons.dark_mode
+                    : _isSepia
+                    ? Icons.auto_awesome
+                    : Icons.light_mode,
                 color: Colors.white,
               ),
             ),
@@ -283,7 +289,13 @@ class _MangaDetailState extends State<MangaDetail> {
               borderRadius: BorderRadius.circular(18),
               child: Opacity(
                 opacity: .12,
-                child: Image.network(manga.linkGambar, fit: BoxFit.cover),
+                child: Image.network(
+                  manga.linkGambar,
+                  fit: BoxFit.cover,
+                  filterQuality: FilterQuality.low,
+                  cacheWidth: 960,
+                  cacheHeight: 640,
+                ),
               ),
             ),
           ),
@@ -335,7 +347,13 @@ class _MangaDetailState extends State<MangaDetail> {
         aspectRatio: 2 / 3,
         child: ClipRRect(
           borderRadius: BorderRadius.circular(12),
-          child: Image.network(_currentManga.linkGambar, fit: BoxFit.cover),
+          child: Image.network(
+            _currentManga.linkGambar,
+            fit: BoxFit.cover,
+            filterQuality: FilterQuality.low,
+            cacheWidth: 420,
+            cacheHeight: 630,
+          ),
         ),
       ),
     );
@@ -381,7 +399,10 @@ class _MangaDetailState extends State<MangaDetail> {
                 items: const [
                   DropdownMenuItem(value: 'reading', child: Text('Reading')),
                   DropdownMenuItem(value: 'plan', child: Text('Plan')),
-                  DropdownMenuItem(value: 'completed', child: Text('Completed')),
+                  DropdownMenuItem(
+                    value: 'completed',
+                    child: Text('Completed'),
+                  ),
                 ],
                 onChanged: (value) {
                   if (value != null) _changeStatus(value);
@@ -507,7 +528,12 @@ class _MangaDetailState extends State<MangaDetail> {
               const SizedBox(width: 10),
               IconButton(
                 tooltip: 'Urutkan',
-                onPressed: () => setState(() => _sortNewest = !_sortNewest),
+                onPressed: () {
+                  setState(() {
+                    _sortNewest = !_sortNewest;
+                    _rebuildChapters();
+                  });
+                },
                 icon: Icon(
                   _sortNewest ? Icons.south : Icons.north,
                   color: Colors.white70,
@@ -516,7 +542,7 @@ class _MangaDetailState extends State<MangaDetail> {
             ],
           ),
           const SizedBox(height: 14),
-          if (_chapters.isEmpty)
+          if (_visibleChapters.isEmpty)
             const Align(
               alignment: Alignment.centerLeft,
               child: Text(
@@ -561,7 +587,7 @@ class _MangaDetailState extends State<MangaDetail> {
                       padding: const EdgeInsets.only(right: 10),
                       physics: const AlwaysScrollableScrollPhysics(),
                       clipBehavior: Clip.hardEdge,
-                      itemCount: _chapters.length,
+                      itemCount: _visibleChapters.length,
                       gridDelegate:
                           const SliverGridDelegateWithMaxCrossAxisExtent(
                             maxCrossAxisExtent: 260,
@@ -570,7 +596,7 @@ class _MangaDetailState extends State<MangaDetail> {
                             mainAxisSpacing: 10,
                           ),
                       itemBuilder: (_, index) {
-                        final chapter = _chapters[index];
+                        final chapter = _visibleChapters[index];
                         return Container(
                           clipBehavior: Clip.hardEdge,
                           padding: const EdgeInsets.fromLTRB(12, 9, 8, 7),
@@ -807,6 +833,8 @@ class _MangaDetailState extends State<MangaDetail> {
 
   @override
   void dispose() {
+    appearanceController.removeListener(_onAppearanceChanged);
+    _chapterSearch.removeListener(_onChapterSearchChanged);
     _chapterSearch.dispose();
     _chapterScrollController.dispose();
     super.dispose();
