@@ -107,7 +107,7 @@ mixin HomeSections on _HomeStateBase {
                 ClipRRect(
                   borderRadius: BorderRadius.circular(8),
                   child: Image.network(
-                    manga.linkGambar,
+                    manga.cardImageUrl,
                     width: 58,
                     height: 78,
                     fit: BoxFit.cover,
@@ -344,7 +344,7 @@ mixin HomeSections on _HomeStateBase {
                 fit: StackFit.expand,
                 children: [
                   Image.network(
-                    manga.linkGambar,
+                    manga.cardImageUrl,
                     fit: BoxFit.cover,
                     errorBuilder:
                         (_, __, ___) => const ColoredBox(
@@ -711,7 +711,7 @@ mixin HomeSections on _HomeStateBase {
             ClipRRect(
               borderRadius: BorderRadius.circular(9),
               child: Image.network(
-                manga.linkGambar,
+                manga.cardImageUrl,
                 width: 170,
                 height: 255,
                 fit: BoxFit.cover,
@@ -785,7 +785,7 @@ mixin HomeSections on _HomeStateBase {
                                   borderRadius: BorderRadius.circular(8),
                                   child: Image.network(
                                     allManga[index % allManga.length]
-                                        .linkGambar,
+                                        .cardImageUrl,
                                     width: 44,
                                     height: 56,
                                     fit: BoxFit.cover,

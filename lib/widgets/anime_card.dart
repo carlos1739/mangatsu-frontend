@@ -98,7 +98,7 @@ class _AnimeCardState extends State<AnimeCard> {
                       top: Radius.circular(8),
                     ),
                     child: Image.network(
-                      widget.anime.linkGambar,
+                      widget.anime.cardImageUrl,
                       width: double.infinity,
                       fit: BoxFit.cover,
                       filterQuality: FilterQuality.low,

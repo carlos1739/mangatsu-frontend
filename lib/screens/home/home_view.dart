@@ -142,7 +142,8 @@ mixin HomeView on _HomeStateBase {
       child: ValueListenableBuilder<TextEditingValue>(
         valueListenable: _searchController,
         builder: (context, value, child) {
-          if (_searchResults.isEmpty) return const SizedBox.shrink();
+          final results = _searchResults;
+          if (results.isEmpty) return const SizedBox.shrink();
           return Container(
             margin: const EdgeInsets.fromLTRB(120, 8, 120, 0),
             constraints: const BoxConstraints(maxWidth: 620),
@@ -153,12 +154,7 @@ mixin HomeView on _HomeStateBase {
                 BoxShadow(color: Colors.black26, blurRadius: 18),
               ],
             ),
-            child: Column(
-              children:
-                  _searchResults
-                      .map((manga) => _searchResultTile(manga))
-                      .toList(),
-            ),
+            child: Column(children: results.map(_searchResultTile).toList()),
           );
         },
       ),
@@ -174,7 +170,7 @@ mixin HomeView on _HomeStateBase {
       leading: ClipRRect(
         borderRadius: BorderRadius.circular(5),
         child: Image.network(
-          manga.linkGambar,
+          manga.cardImageUrl,
           width: 38,
           height: 48,
           fit: BoxFit.cover,

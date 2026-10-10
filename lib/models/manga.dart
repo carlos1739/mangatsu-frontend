@@ -2,6 +2,7 @@ class Manga {
   final int id;
   final String title;
   final String linkGambar;
+  final String? thumbnailUrl;
   final String chapter;
   final String status;
   final String sinopsis;
@@ -17,6 +18,7 @@ class Manga {
     required this.id,
     required this.title,
     required this.linkGambar,
+    this.thumbnailUrl,
     required this.chapter,
     required this.status,
     required this.sinopsis,
@@ -42,6 +44,12 @@ class Manga {
             ? jpg['image_url']
             : jpg is Map<dynamic, dynamic>
             ? jpg['image_url']
+            : null;
+    final smallImageUrl =
+        jpg is Map<String, dynamic>
+            ? jpg['small_image_url']
+            : jpg is Map<dynamic, dynamic>
+            ? jpg['small_image_url']
             : null;
     List<String> readNames(dynamic rawValue) {
       final values =
@@ -87,6 +95,10 @@ class Manga {
           json['link_gambar']?.toString() ??
           imageUrl?.toString() ??
           '',
+      thumbnailUrl:
+          json['thumbnail_url']?.toString() ??
+          json['thumbnailUrl']?.toString() ??
+          smallImageUrl?.toString(),
       chapter:
           json['chapter']?.toString() ?? json['chapters']?.toString() ?? 'N/A',
       status: json['status']?.toString() ?? 'Unknown',
@@ -100,6 +112,11 @@ class Manga {
       view: json['view'] as int? ?? 0,
       rating: (json['rating'] ?? json['score'] ?? 0.0).toDouble(),
     );
+  }
+
+  String get cardImageUrl {
+    final thumbnail = thumbnailUrl?.trim() ?? '';
+    return thumbnail.isEmpty ? linkGambar : thumbnail;
   }
 }
 

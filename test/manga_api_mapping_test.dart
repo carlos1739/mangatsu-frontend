@@ -17,7 +17,10 @@ void main() {
       ],
       'score': 8.5,
       'images': {
-        'jpg': {'image_url': 'https://example.com/cover.jpg'},
+        'jpg': {
+          'image_url': 'https://example.com/cover.jpg',
+          'small_image_url': 'https://example.com/cover-small.jpg',
+        },
       },
     });
 
@@ -26,6 +29,7 @@ void main() {
     expect(manga.author, 'Penulis');
     expect(manga.chapter, '12');
     expect(manga.linkGambar, 'https://example.com/cover.jpg');
+    expect(manga.cardImageUrl, 'https://example.com/cover-small.jpg');
     expect(manga.genre, ['Action', 'Drama']);
     expect(manga.rating, 8.5);
   });
@@ -40,18 +44,17 @@ void main() {
       'synopsis': 'Ringkasan',
       'release': 'Unknown',
       'genre': 'Action,Adventure,Drama,Fantasy',
-      'link_gambar':
-          'https://cdn.myanimelist.net/images/manga/1/157897.jpg',
+      'link_gambar': 'https://cdn.myanimelist.net/images/manga/1/157897.jpg',
       'rating': 9.46,
     });
 
     expect(manga.id, 2);
-    expect(manga.linkGambar,
-        'https://cdn.myanimelist.net/images/manga/1/157897.jpg');
     expect(
-      manga.genre,
-      ['Action', 'Adventure', 'Drama', 'Fantasy'],
+      manga.linkGambar,
+      'https://cdn.myanimelist.net/images/manga/1/157897.jpg',
     );
+    expect(manga.cardImageUrl, manga.linkGambar);
+    expect(manga.genre, ['Action', 'Adventure', 'Drama', 'Fantasy']);
     expect(manga.rating, 9.46);
   });
 }

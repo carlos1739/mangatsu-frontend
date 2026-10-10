@@ -294,7 +294,7 @@ abstract class _HomeStateBase extends State<Beranda> {
                                             10,
                                           ),
                                           child: Image.network(
-                                            manga.linkGambar,
+                                            manga.cardImageUrl,
                                             width: 130,
                                             fit: BoxFit.cover,
                                             filterQuality: FilterQuality.low,
@@ -360,7 +360,7 @@ class _BerandaState extends _HomeStateBase
                       child: CustomScrollView(
                         slivers: [
                           _buildHeader(),
-                          if (_searchResults.isNotEmpty) _buildSearchDropdown(),
+                          _buildSearchDropdown(),
                           _buildCategoryMenu(),
                           if (_showLibrary) _buildLibrarySection(),
                           _buildHero(),

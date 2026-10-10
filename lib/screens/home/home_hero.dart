@@ -67,7 +67,7 @@ mixin HomeHero on _HomeStateBase {
                               ),
                               clipBehavior: Clip.antiAlias,
                               child: Image.network(
-                                manga.linkGambar,
+                                manga.cardImageUrl,
                                 fit: BoxFit.cover,
                                 filterQuality: FilterQuality.low,
                                 cacheWidth: 224,

@@ -82,46 +82,7 @@ class _GenreDirectoryState extends State<GenreDirectory> {
     if (mounted) setState(() {});
   }
 
-  List<Manga> _directory = [];
-
-  Future<List<Manga>> _loadDirectoryManga() async {
-    final manga = await ApiService.getAllManga();
-    final available = {
-      for (final item in manga.expand((item) => item.genre))
-        item.trim().toLowerCase(),
-    };
-    final missingGenres =
-        _knownGenres
-            .where((genre) => !available.contains(genre.toLowerCase()))
-            .toList();
-
-    if (missingGenres.isEmpty) {
-      _directory = manga;
-      return manga;
-    }
-
-    final responses = await Future.wait(
-      missingGenres.map(ApiService.searchManga),
-      eagerError: false,
-    );
-    final merged = <String, Manga>{
-      for (final item in manga) _mangaKey(item): item,
-    };
-    for (var i = 0; i < missingGenres.length; i++) {
-      final target = missingGenres[i].trim().toLowerCase();
-      for (final item in responses[i]) {
-        final hasGenre = item.genre.any(
-          (g) => g.trim().toLowerCase() == target,
-        );
-        if (hasGenre) merged[_mangaKey(item)] = item;
-      }
-    }
-    _directory = merged.values.toList();
-    return _directory;
-  }
-
-  String _mangaKey(Manga manga) =>
-      manga.id > 0 ? 'id:${manga.id}' : 'title:${manga.title.toLowerCase()}';
+  Future<List<Manga>> _loadDirectoryManga() => ApiService.getAllManga();
 
   @override
   void dispose() {
@@ -524,7 +485,7 @@ class _GenreDirectoryState extends State<GenreDirectory> {
                               child: ClipRRect(
                                 borderRadius: BorderRadius.circular(10),
                                 child: Image.network(
-                                  item.linkGambar,
+                                  item.cardImageUrl,
                                   width: 130,
                                   fit: BoxFit.cover,
                                   cacheWidth: 260,
