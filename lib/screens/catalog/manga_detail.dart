@@ -77,10 +77,16 @@ class _MangaDetailState extends State<MangaDetail> {
     }
   }
 
+  // [UBAH] _checkBookmark diganti: sekarang mengambil status baca
   Future<void> _checkBookmark() async {
-    final bookmarked = await ApiService.isBookmarked(widget.manga.id);
-    if (mounted) setState(() => _bookmarked = bookmarked);
+    final status = await ApiService.getBookmarkStatus(widget.manga.id);
+    if (!mounted) return;
+    setState(() {
+      _bookmarked = status != null;
+      if (status != null) _readStatus = status;
+    });
   }
+  // [AKHIR]
 
   Future<void> _toggleBookmark() async {
     setState(() => _bookmarkLoading = true);
@@ -91,7 +97,12 @@ class _MangaDetailState extends State<MangaDetail> {
         await ApiService.addBookmark(_currentManga);
       }
       if (mounted) {
-        setState(() => _bookmarked = !_bookmarked);
+        // [UBAH] sebelumnya: setState(() => _bookmarked = !_bookmarked);
+        setState(() {
+          _bookmarked = !_bookmarked;
+          if (_bookmarked) _readStatus = 'plan';
+        });
+        // [AKHIR]
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(
@@ -110,6 +121,20 @@ class _MangaDetailState extends State<MangaDetail> {
       if (mounted) setState(() => _bookmarkLoading = false);
     }
   }
+
+  // [BARU] fungsi untuk mengubah status baca
+  Future<void> _changeStatus(String value) async {
+    final old = _readStatus;
+    setState(() => _readStatus = value);
+    try {
+      await ApiService.updateBookmarkStatus(widget.manga.id, value);
+      _showMessage('Status diperbarui: ${ApiService.statusLabel(value)}');
+    } catch (error) {
+      if (mounted) setState(() => _readStatus = old);
+      _showMessage('Gagal memperbarui status: $error');
+    }
+  }
+  // [AKHIR]
 
   int get _chapterCount => int.tryParse(_currentManga.chapter) ?? 0;
 

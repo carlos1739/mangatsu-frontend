@@ -110,6 +110,7 @@ class ApiService {
       manga.id > 0 ? 'id:${manga.id}' : 'title:${manga.title.toLowerCase()}';
 
   // ============ BOOKMARK ENDPOINTS ============
+  // >>> TAMBAHAN 2: seluruh blok bookmark ditulis ulang agar membawa user_id
 
   static int _requireUserId() {
     final userId = UserSession.id;
@@ -135,11 +136,18 @@ class ApiService {
           )
           .timeout(timeout);
 
-      if (response.statusCode != 201) {
-        throw Exception('Failed to bookmark');
-      }
-    } catch (e) {
-      rethrow;
+  // >>> BARU: menyimpan status baca tiap bookmark (diisi saat getBookmarks dipanggil)
+  static final Map<int, String> bookmarkStatus = {};
+
+  // >>> BARU: ubah kode status jadi tulisan yang tampil di layar
+  static String statusLabel(String? status) {
+    switch (status) {
+      case 'reading':
+        return 'Sedang dibaca';
+      case 'completed':
+        return 'Selesai';
+      default:
+        return 'Ingin dibaca';
     }
   }
 
@@ -163,11 +171,12 @@ class ApiService {
       } else {
         throw Exception('Failed to load bookmarks');
       }
-    } catch (e) {
-      rethrow;
+      return data.map((item) => Manga.fromApiJson(item)).toList();
     }
+    throw Exception('Failed to load bookmarks');
   }
 
+  // Cek apakah manga ini sudah di-bookmark user
   static Future<bool> isBookmarked(int mangaId) async {
     final userId = UserSession.id;
     if (userId == null) return false;
@@ -208,8 +217,39 @@ class ApiService {
       if (response.statusCode != 200) {
         throw Exception('Failed to remove bookmark');
       }
+      return null;
     } catch (e) {
-      rethrow;
+      developer.log('Error checking bookmark: $e', name: 'ApiService');
+      return null;
     }
   }
+
+  // >>> BARU (UPDATE): ubah status baca
+  static Future<void> updateBookmarkStatus(int mangaId, String status) async {
+    final userId = _requireUserId();
+    final response = await http
+        .put(
+          Uri.parse('$baseUrl/bookmark/$mangaId'),
+          headers: {'Content-Type': 'application/json'},
+          body: jsonEncode({'user_id': userId, 'read_status': status}),
+        )
+        .timeout(timeout);
+
+    if (response.statusCode != 200) {
+      throw Exception('Failed to update bookmark');
+    }
+  }
+
+  // Hapus bookmark
+  static Future<void> removeBookmark(int mangaId) async {
+    final userId = _requireUserId();
+    final response = await http
+        .delete(Uri.parse('$baseUrl/bookmark/$mangaId?user_id=$userId'))
+        .timeout(timeout);
+
+    if (response.statusCode != 200) {
+      throw Exception('Failed to remove bookmark');
+    }
+  }
+  // <<< SELESAI TAMBAHAN 2
 }
